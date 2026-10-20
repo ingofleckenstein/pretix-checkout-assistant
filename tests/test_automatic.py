@@ -50,9 +50,11 @@ class AdapterTests(unittest.TestCase):
     def test_questions_and_extra_fields_stop_automatic_submission(self):
         self.step.order_questions_form.fields["question_1"] = object()
         self.assertFalse(should_attempt(self.request, self.step))
+        self.assertTrue(should_attempt(self.request, self.step, prefill_only=True))
         self.step.order_questions_form.fields.clear()
         self.step.forms[0].fields["question_2"] = object()
         self.assertFalse(should_attempt(self.request, self.step))
+        self.assertTrue(should_attempt(self.request, self.step, prefill_only=True))
 
     def test_invoice_setting_errors_and_backward_navigation_stop_it(self):
         self.request.GET["dir"] = "prev"
