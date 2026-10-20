@@ -20,8 +20,8 @@ def add_small_invoice_notice(event, invoice):
     if invoice.order.customer_id or any((invoice.invoice_to_company, invoice.invoice_to_street,
                                          invoice.invoice_to_city, invoice.invoice_to_zipcode)):
         return False
-    # A guest's contact name can appear in the recipient block even without an
-    # address. Preserve it, but leave any other unstructured recipient data alone.
+    # A guest's contact name can appear without an address. Leave any other
+    # unstructured recipient data alone.
     recipient = (invoice.invoice_to or '').strip()
     name = (invoice.invoice_to_name or '').strip()
     if recipient and recipient != name:
@@ -33,6 +33,10 @@ def add_small_invoice_notice(event, invoice):
     except (InvalidOperation, ValueError, TypeError):
         return False
     # pretix calls this hook inside the invoice's selected language context.
-    invoice.invoice_to = '\n'.join(filter(None, (recipient, gettext(NOTICE))))
-    invoice.save(update_fields=['invoice_to'])
+    # pretix renders structured name fields instead of invoice_to when present.
+    # Clear the invoice snapshot's name so the notice is rendered; the order's
+    # contact details are not changed.
+    invoice.invoice_to = gettext(NOTICE)
+    invoice.invoice_to_name = ''
+    invoice.save(update_fields=['invoice_to', 'invoice_to_name'])
     return True

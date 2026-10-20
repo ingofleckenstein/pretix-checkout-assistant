@@ -23,14 +23,15 @@ class InvoiceNoticeTests(unittest.TestCase):
         with patch('pretix_checkout_assistant.invoice_notice.gettext', return_value=NOTICE):
             self.assertTrue(add_small_invoice_notice(event, invoice))
         self.assertEqual(invoice.invoice_to, NOTICE)
-        invoice.save.assert_called_once_with(update_fields=['invoice_to'])
+        invoice.save.assert_called_once_with(update_fields=['invoice_to', 'invoice_to_name'])
 
-    def test_guest_name_without_address_keeps_name_and_adds_notice(self):
+    def test_guest_name_without_address_is_replaced_by_notice(self):
         event, invoice = sample()
         invoice.invoice_to = invoice.invoice_to_name = 'Test Gast'
         with patch('pretix_checkout_assistant.invoice_notice.gettext', return_value=NOTICE):
             self.assertTrue(add_small_invoice_notice(event, invoice))
-        self.assertEqual(invoice.invoice_to, 'Test Gast\n' + NOTICE)
+        self.assertEqual(invoice.invoice_to, NOTICE)
+        self.assertEqual(invoice.invoice_to_name, '')
 
     def test_unstructured_recipient_is_not_overwritten(self):
         event, invoice = sample()
