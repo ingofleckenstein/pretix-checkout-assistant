@@ -2,7 +2,9 @@ from dataclasses import replace
 from decimal import Decimal
 import unittest
 
-from pretix_checkout_assistant.invoice_policy import InvoiceFacts, InvoiceMode, early_invoice_mode, invoice_mode
+from pretix_checkout_assistant.invoice_policy import (
+    InvoiceFacts, InvoiceMode, early_invoice_mode, guest_invoice_mode, invoice_mode,
+)
 
 
 class SmallInvoicePolicyTests(unittest.TestCase):
@@ -39,6 +41,15 @@ class SmallInvoicePolicyTests(unittest.TestCase):
                         {"customer_requests_full": True}, {"currency": "USD"}):
             with self.subTest(changes=changes):
                 self.assertIs(early_invoice_mode(replace(early, **changes)), InvoiceMode.FULL)
+
+    def test_guest_decision_requires_both_checks(self):
+        early = replace(self.facts, gross_total="200.00", price_final=False)
+        final = replace(self.facts, gross_total="250.00", price_final=True)
+        self.assertIs(guest_invoice_mode(early, final), InvoiceMode.SMALL_AMOUNT_CANDIDATE)
+        self.assertIs(guest_invoice_mode(replace(early, gross_total="200.01"), final), InvoiceMode.FULL)
+        self.assertIs(guest_invoice_mode(early, replace(final, gross_total="250.01")), InvoiceMode.FULL)
+        self.assertIs(guest_invoice_mode(early, replace(final, price_final=False)), InvoiceMode.FULL)
+        self.assertIs(guest_invoice_mode(early, replace(final, customer_requests_full=True)), InvoiceMode.FULL)
 
     def test_unknown_and_exception_fall_back(self):
         for field in ("exception_3c", "exception_6a", "exception_13b"):
