@@ -35,14 +35,22 @@ def should_attempt(request, step, *, prefill_only=False):
         return False
     if not prefill_only and step.order_questions_form and step.order_questions_form.fields:
         return False
-    if set(step.contact_form.fields) - {"email", "email_repeat"}:
+    # pretix itself prepopulates the customer's telephone number. Its normal
+    # form validation still decides whether a required number is present.
+    if set(step.contact_form.fields) - {"email", "email_repeat", "phone"}:
         return False
     positions = step._positions_for_questions
     if len(positions) != 1 or len(step.forms) != 1:
         return False
     form = step.forms[0]
-    if not prefill_only and set(form.fields) - {"attendee_name_parts", "save", "saved_id"}:
-        return False
+    if not prefill_only:
+        if set(form.fields) - {"attendee_name_parts", "attendee_email", "save", "saved_id"}:
+            return False
+        # An optional attendee email may be left blank; a required one is a
+        # deliberate attendee input and must not be silently guessed.
+        attendee_email = form.fields.get("attendee_email")
+        if attendee_email is not None and getattr(attendee_email, "required", True):
+            return False
     if "attendee_name_parts" not in form.fields:
         return False
     if positions[0].attendee_name_parts:
@@ -76,3 +84,4 @@ def should_attempt(request, step, *, prefill_only=False):
         previous_form_error=False,
     )
     return customer_checkout_action(facts) is CheckoutAction.APPLY_AND_VALIDATE
+

@@ -66,6 +66,13 @@ class AdapterTests(unittest.TestCase):
         self.step.get_cart = lambda: {"total": Decimal("0")}
         self.assertFalse(should_attempt(self.request, self.step))
 
+    def test_phone_and_optional_attendee_email_do_not_block_validation(self):
+        self.step.contact_form.fields["phone"] = NS(required=False)
+        self.step.forms[0].fields["attendee_email"] = NS(required=False)
+        self.assertTrue(should_attempt(self.request, self.step))
+        self.step.forms[0].fields["attendee_email"].required = True
+        self.assertFalse(should_attempt(self.request, self.step))
+
     def test_multiple_profiles_or_tickets_do_not_choose_for_customer(self):
         self.customer.stored_addresses.addresses.append(self.customer.stored_addresses.addresses[0])
         self.assertFalse(should_attempt(self.request, self.step))
@@ -76,3 +83,4 @@ class AdapterTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
