@@ -70,3 +70,14 @@ def invoice_mode(facts: InvoiceFacts) -> InvoiceMode:
         return InvoiceMode.FULL
     return _candidate(facts, FINAL_GROSS_LIMIT)
 
+
+def guest_invoice_mode(early: InvoiceFacts, final: InvoiceFacts) -> InvoiceMode:
+    """Require both the preliminary buffer and the final legal limit.
+
+    This is still only a policy decision: the caller must obtain both totals
+    from the same checkout and enforce the result before placing an order.
+    """
+    if early_invoice_mode(early) is not InvoiceMode.SMALL_AMOUNT_CANDIDATE:
+        return InvoiceMode.FULL
+    return invoice_mode(final)
+
