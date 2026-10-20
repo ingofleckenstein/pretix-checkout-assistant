@@ -19,6 +19,42 @@ guard rejects address-free orders that do not meet its checks. Events must
 explicitly enable the experiment and attest that the simplified invoice is
 legally eligible. This is not a complete automatic legal assessment.
 
+The experimental guest adapter keeps pretix's event-wide billing address
+settings enabled. For a guest request it hides the standard address panel
+and uses the guest address steps; for a signed-in customer it leaves the
+standard pretix form and saved-profile behavior in place. When returning
+through the questions page, a guest address entered in a plugin step is
+restored from the current cart session and tax is recalculated. Additional
+participant questions still require normal pretix validation.
+
+The guest experiment accepts both `invoice_generate=True` and `paid`.
+Before invoice generation the plugin checks address-free guest orders again,
+including the current total, position and fee tax rules. If the check fails,
+invoice generation is rejected. pretix can still confirm the payment and record
+an invoice generation error; staff must add a complete billing address and
+then generate the invoice. The plugin registers a pretix notification type
+for invoice generation failures. Each team member must explicitly enable this
+notification in their personal pretix notification settings; delivery also
+requires the normal notification worker, configured delivery method and order
+read permission. This warns about any invoice failure, including failures not
+caused by this plugin. It does not automatically repair an invoice. The
+`checkout_assistant_guest_experiment`,
+`checkout_assistant_german_small_invoice_approved`, and
+`checkout_assistant_small_invoice_notice` settings are not yet exposed in a
+control-panel form. Do not enable them on a live event without reviewing
+invoicing, tax exceptions and all supported payment methods.
+
+For events with the guest experiment enabled, a warning appears on the order
+detail page and, with JavaScript enabled, on the customer and staff order
+change forms whenever the order lacks a complete billing address. It does not
+depend on the address printed on an earlier invoice. The warning does not
+block changes. The previous private order-change monkeypatch was removed.
+Checkout and invoice generation still enforce their own eligibility checks;
+an invoice may therefore fail after a change or payment, and staff must
+resolve it. The package remains pinned to pretix 2026.8.0 because other
+checkout integration points also need compatibility testing. Installing with
+`--no-deps` bypasses the package pin.
+
 Plugin-provided checkout messages are available in German and English.
 English is the source language. German translations are shipped as a compiled
 Django catalog. Other languages have not been translated by this plugin.
@@ -52,6 +88,16 @@ addresses. They did not touch the production installation:
 * A direct isolated guard test rejected a simulated 251 EUR address-free
   order and rolled back the database update. This is not a complete
   end-to-end test of late fee changes or interactions with other plugins.
+* Request-scoped integration tests exercise genuine pretix flow objects with
+  both guest and signed-in modes under the same required-address event
+  settings, and check restoration of an entered guest address. These tests
+  do not establish a new browser-to-invoice end-to-end result for that setup.
+* An isolated, rolled-back test cloned a pending 249 EUR guest order, marked
+  its bank-transfer payment confirmed without sending email, and verified that
+  pretix generated the small-invoice notice with `invoice_generate=paid`.
+  A changed 251 EUR order without an address failed invoice generation, while
+  a 251 EUR order with an address generated an invoice. The test also confirmed
+  that pretix retains payment confirmation when invoice generation fails.
 
 Run local unit tests with Django installed:
 
@@ -71,7 +117,7 @@ node tests/test_automatic_js.cjs
 * Multiple tickets, addresses and complex participant forms need further
   design and tests. The automatic flow deliberately stops in uncertain cases.
 * SEPA, real Keycloak/OIDC login, plugin combinations, sales channels, tax
-  exceptions, unexpected recalculation and paid-invoice configuration are
+  exceptions, unexpected recalculation and complete paid checkout flows are
   not comprehensively tested. Invoice legal compliance requires separate
   review for the actual business and event configuration.
 * Docker packaging, operational installation and rollback instructions

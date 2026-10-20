@@ -61,20 +61,38 @@ def restore_address_backup(step):
     step.__dict__['invoice_address'] = address
 
 
-def enabled(event):
+def configured(event):
     return event.settings.get('checkout_assistant_guest_experiment', as_type=bool, default=False)
+
+
+def enabled(event):
+    return configured(event)
 
 
 def small_invoice_approved(event):
     return (event.currency == 'EUR'
             and event.settings.get('checkout_assistant_german_small_invoice_approved', as_type=bool, default=False)
-            and event.settings.invoice_generate == 'True'
+            and event.settings.invoice_generate in ('True', 'paid')
             and not event.settings.invoice_generate_only_business)
 
 
 def address_complete(address):
     return bool(address and address.pk and address.street and address.zipcode and address.city
                 and address.country and (address.name or address.company))
+
+
+class GuestQuestionsAdapter(CartMixin, TemplateFlowStep):
+    """Select the guest form for this request without changing event settings."""
+    priority = 49
+    identifier = 'checkout_assistant_guest_questions_adapter'
+
+    def is_applicable(self, request):
+        self.request = request
+        if enabled(self.event) and self.cart_session.get('customer_mode', 'guest') == 'guest':
+            for step in getattr(request, '_checkout_flow', ()):
+                if step.identifier in ('questions', 'confirm'):
+                    step.__dict__['address_asked'] = False
+        return False
 
 
 class RequiredAddressForm(InvoiceAddressForm):
@@ -100,8 +118,7 @@ class GuestAddressStep(CartMixin, TemplateFlowStep):
         self.request = request
         if not enabled(self.event) or self.cart_customer:
             return False
-        if not self.event.settings.invoice_address_asked:
-            restore_address_backup(self)
+        restore_address_backup(self)
         match = getattr(request, 'resolver_match', None)
         editing = (match and match.kwargs.get('step') == self.identifier
                    and request.GET.get('edit_invoice') == '1')

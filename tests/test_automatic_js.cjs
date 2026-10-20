@@ -57,3 +57,18 @@ test('does not replace a different existing name', () => {
   assert.equal(result.submitted, 0);
   assert.equal(result.fields.street.value, '');
 });
+
+test('shows the warning immediately above the order change form', () => {
+  let inserted;
+  const form = {parentNode: {insertBefore: (element, before) => { inserted = {element, before}; }}};
+  const warningScript = {dataset: {orderAddressWarning: 'Billing address may be required'}};
+  const document = {
+    querySelector: s => s === 'script[data-order-address-warning]' ? warningScript :
+      s === '.form-order-change' ? {closest: () => form} : null,
+    createElement: () => ({setAttribute(name, value) { this[name] = value; }})
+  };
+  vm.runInNewContext(script, {document, window: {addEventListener: (_, fn) => fn()}});
+  assert.equal(inserted.before, form);
+  assert.equal(inserted.element.textContent, 'Billing address may be required');
+  assert.equal(inserted.element.role, 'alert');
+});

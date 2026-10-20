@@ -4,18 +4,85 @@ from django.dispatch import receiver
 from django.templatetags.static import static
 from django.utils.html import format_html
 from django.utils.translation import gettext as _
+from django.utils.translation import gettext_lazy
 from pretix.presale.signals import html_head, checkout_flow_steps, checkout_confirm_page_content
+from pretix.presale.signals import order_info_top as presale_order_info_top
+from pretix.control.signals import html_head as control_html_head, order_info as control_order_info
 from pretix.multidomain.urlreverse import eventreverse
-from pretix.base.signals import build_invoice_data, order_placed
+from pretix.base.signals import build_invoice_data, order_placed, register_notification_types
+from pretix.base.notifications import ParametrizedOrderNotificationType
 from pretix.base.models import InvoiceAddress, OrderFee
 from pretix.base.services.orders import OrderError
 from decimal import Decimal
 
 from .automatic import should_attempt
 from .invoice_notice import add_small_invoice_notice
-from .guest_checkout import GuestEarlyAddressStep, GuestFinalAddressStep, enabled, address_complete, small_invoice_approved
+from .guest_checkout import GuestQuestionsAdapter, GuestEarlyAddressStep, GuestFinalAddressStep, configured, enabled, address_complete, small_invoice_approved
 
 logger = logging.getLogger(__name__)
+
+ORDER_WARNING = gettext_lazy(
+    'If you change this order and its total exceeds 250 EUR, a complete billing address may be required. '
+    'Please add a billing address before changing the order.'
+)
+
+
+def order_needs_address_warning(event, order):
+    if not configured(event):
+        return False
+    try:
+        return not address_complete(order.invoice_address)
+    except InvoiceAddress.DoesNotExist:
+        return True
+
+
+def order_warning_markup():
+    return format_html('<div class="alert alert-warning" role="alert">{}</div>', ORDER_WARNING)
+
+
+@receiver(presale_order_info_top, dispatch_uid='checkout_assistant_presale_order_warning')
+@receiver(control_order_info, dispatch_uid='checkout_assistant_control_order_warning')
+def order_address_warning(sender, order, request, **kwargs):
+    return order_warning_markup() if order_needs_address_warning(sender, order) else ''
+
+
+@receiver(html_head, dispatch_uid='checkout_assistant_presale_change_warning')
+@receiver(control_html_head, dispatch_uid='checkout_assistant_control_change_warning')
+def order_change_warning_script(sender, request, **kwargs):
+    match = getattr(request, 'resolver_match', None)
+    if not match or match.view_name not in ('presale:event.order.change', 'control:event.order.change'):
+        return ''
+    if not configured(sender):
+        return ''
+    query = {'code': match.kwargs.get('order' if match.view_name.startswith('presale:') else 'code')}
+    if match.view_name.startswith('presale:'):
+        query['secret'] = match.kwargs.get('secret')
+    order = sender.orders.filter(**query).first()
+    if not order or not order_needs_address_warning(sender, order):
+        return ''
+    try:
+        src = static('pretix_checkout_assistant/automatic.js')
+    except (ValueError, OSError):
+        logger.exception('Checkout assistant warning script unavailable')
+        return ''
+    return format_html('<script defer data-order-address-warning="{}" src="{}"></script>', ORDER_WARNING, src)
+
+
+@receiver(register_notification_types, dispatch_uid="checkout_assistant_invoice_failure_notification")
+def invoice_failure_notification(sender, **kwargs):
+    # pretix records this action after a failed invoice, even when payment
+    # remains confirmed. Delivery uses each user's notification settings.
+    return ParametrizedOrderNotificationType(
+        sender,
+        'pretix.event.order.invoice.failed',
+        gettext_lazy('Invoice generation failed'),
+        gettext_lazy('Invoice generation failed for order {order.code}. Check the order and create the invoice.'),
+    )
+
+
+@receiver(checkout_flow_steps, dispatch_uid="checkout_assistant_guest_questions_adapter")
+def guest_questions_adapter(sender, **kwargs):
+    return GuestQuestionsAdapter
 
 
 @receiver(checkout_flow_steps, dispatch_uid="checkout_assistant_guest_early")
@@ -30,7 +97,7 @@ def guest_final_step(sender, **kwargs):
 
 @receiver(checkout_confirm_page_content, dispatch_uid="checkout_assistant_guest_address_review")
 def guest_address_review(sender, request, **kwargs):
-    if not enabled(sender) or sender.settings.invoice_address_asked:
+    if not enabled(sender):
         return ""
     step = next((s for s in getattr(request, '_checkout_flow', ())
                  if s.identifier == 'checkout_assistant_address_final'), None)
@@ -58,7 +125,7 @@ def guest_address_review(sender, request, **kwargs):
 @receiver(order_placed, dispatch_uid="checkout_assistant_guest_final_guard")
 def guest_final_guard(sender, order, **kwargs):
     """Recheck after pretix calculates final fees, within order creation's transaction."""
-    if not enabled(sender) or order.customer_id:
+    if not configured(sender) or order.customer_id:
         return
     if order.total == Decimal('0.00'):
         return
@@ -84,6 +151,10 @@ def guest_final_guard(sender, order, **kwargs):
 
 @receiver(build_invoice_data, dispatch_uid="checkout_assistant_small_invoice_notice")
 def invoice_notice(sender, invoice, **kwargs):
+    # Orders can be modified after checkout. Recheck before a non-cancellation
+    # invoice is committed, including when payment triggers delayed invoicing.
+    if not invoice.is_cancellation:
+        guest_final_guard(sender, invoice.order)
     add_small_invoice_notice(sender, invoice)
 
 

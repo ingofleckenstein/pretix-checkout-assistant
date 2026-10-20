@@ -40,7 +40,9 @@ def should_attempt(request, step, *, prefill_only=False):
     if set(step.contact_form.fields) - {"email", "email_repeat", "phone"}:
         return False
     positions = step._positions_for_questions
-    if len(positions) != 1 or len(step.forms) != 1:
+    if not positions or len(step.forms) != len(positions):
+        return False
+    if not prefill_only and len(positions) != 1:
         return False
     form = step.forms[0]
     if not prefill_only:
@@ -74,7 +76,9 @@ def should_attempt(request, step, *, prefill_only=False):
         customer_mode=session.get("customer_mode"),
         invoice_profiles=addresses,
         existing_invoice_data=False,
-        position_count=len(positions),
+        # Prefill only applies the billing profile; it never submits or fills
+        # the names of additional attendees. Submission remains single-ticket.
+        position_count=1 if prefill_only else len(positions),
         individual_questions_exist=False,
         other_input_required=False,
         valid_customer_email=True,
@@ -84,4 +88,3 @@ def should_attempt(request, step, *, prefill_only=False):
         previous_form_error=False,
     )
     return customer_checkout_action(facts) is CheckoutAction.APPLY_AND_VALIDATE
-

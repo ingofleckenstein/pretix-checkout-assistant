@@ -9,7 +9,7 @@ class CheckoutAssistantApp(AppConfig):
     class PretixPluginMeta:
         name = _("Checkout Assistant (experimental)")
         author = "Spotstone UG"
-        version = "0.0.1.dev0"
+        version = "0.0.2.dev0"
         visible = True
         category = "FEATURE"
         description = _("Experimental customer checkout integration; not production-ready.")

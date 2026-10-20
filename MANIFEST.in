@@ -1,0 +1,2 @@
+include tests/*.cjs
+include tools/*.py

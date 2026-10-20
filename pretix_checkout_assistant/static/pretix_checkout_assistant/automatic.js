@@ -1,5 +1,17 @@
 /* Experimental. Pretix's own POST performs the server-side validation. */
 window.addEventListener('load', function () {
+    const warningScript = document.querySelector('script[data-order-address-warning]');
+    if (warningScript) {
+        const fields = document.querySelector('.form-order-change');
+        const form = fields && fields.closest('form');
+        if (form) {
+            const warning = document.createElement('div');
+            warning.className = 'alert alert-warning';
+            warning.setAttribute('role', 'alert');
+            warning.textContent = warningScript.dataset.orderAddressWarning;
+            form.parentNode.insertBefore(warning, form);
+        }
+    }
     const invoice = document.querySelector('#invoice');
     const form = invoice && invoice.closest('form');
     const source = document.querySelector('#addresses_json');

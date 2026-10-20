@@ -39,3 +39,15 @@ msgstr "Checkout-Assistent (experimentell)"
 
 msgid "Experimental customer checkout integration; not production-ready."
 msgstr "Experimentelle Checkout-Integration; noch nicht für den Produktivbetrieb geeignet."
+
+msgid "This change requires a complete billing address. Add the billing address to the order before confirming the change."
+msgstr "Für diese Änderung wird eine vollständige Rechnungsanschrift benötigt. Bitte ergänzen Sie die Rechnungsanschrift in der Bestellung, bevor Sie die Änderung bestätigen."
+
+msgid "Invoice generation failed"
+msgstr "Rechnungserstellung fehlgeschlagen"
+
+msgid "Invoice generation failed for order {order.code}. Check the order and create the invoice."
+msgstr "Die Rechnung für Bestellung {order.code} konnte nicht erstellt werden. Bitte prüfen Sie die Bestellung und erstellen Sie die Rechnung."
+
+msgid "If you change this order and its total exceeds 250 EUR, a complete billing address may be required. Please add a billing address before changing the order."
+msgstr "Wenn Sie diese Bestellung ändern und der Gesamtbetrag 250 € übersteigt, kann eine vollständige Rechnungsanschrift erforderlich sein. Bitte hinterlegen Sie vor der Änderung eine Rechnungsanschrift."
