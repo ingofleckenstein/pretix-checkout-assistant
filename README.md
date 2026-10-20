@@ -19,4 +19,5 @@ python -m unittest discover -s tests -v
 node tests/test_automatic_js.cjs
 ```
 
-The small-invoice module identifies potential candidates only when prerequisites are explicitly confirmed. Unknown cases fall back to a full invoice; this does not determine legal compliance.
+The small-invoice module models a preliminary €200 gross threshold and a separate final €250 gross threshold. An early candidate is not permission to place an address-free order: the actual final total and legal prerequisites must be checked again at a safe point. Unknown cases fall back to a full invoice; these helpers are not connected to checkout and do not determine legal compliance.
+
