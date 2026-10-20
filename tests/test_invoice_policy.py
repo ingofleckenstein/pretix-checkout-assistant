@@ -2,7 +2,7 @@ from dataclasses import replace
 from decimal import Decimal
 import unittest
 
-from pretix_checkout_assistant.invoice_policy import InvoiceFacts, InvoiceMode, invoice_mode
+from pretix_checkout_assistant.invoice_policy import InvoiceFacts, InvoiceMode, early_invoice_mode, invoice_mode
 
 
 class SmallInvoicePolicyTests(unittest.TestCase):
@@ -19,6 +19,26 @@ class SmallInvoicePolicyTests(unittest.TestCase):
                                  ("250.01", InvoiceMode.FULL)):
             with self.subTest(amount=amount):
                 self.assertIs(invoice_mode(replace(self.facts, gross_total=amount)), expected)
+
+    def test_early_buffer_and_final_recheck_are_distinct(self):
+        for amount, expected in (("199.99", InvoiceMode.SMALL_AMOUNT_CANDIDATE),
+                                 ("200.00", InvoiceMode.SMALL_AMOUNT_CANDIDATE),
+                                 ("200.01", InvoiceMode.FULL)):
+            with self.subTest(amount=amount):
+                self.assertIs(early_invoice_mode(replace(self.facts, gross_total=amount, price_final=False)), expected)
+        early = replace(self.facts, gross_total="200.00", price_final=False)
+        self.assertIs(early_invoice_mode(early), InvoiceMode.SMALL_AMOUNT_CANDIDATE)
+        self.assertIs(invoice_mode(early), InvoiceMode.FULL)
+        self.assertIs(invoice_mode(replace(early, gross_total="250.00", price_final=True)), InvoiceMode.SMALL_AMOUNT_CANDIDATE)
+        self.assertIs(invoice_mode(replace(early, gross_total="250.01", price_final=True)), InvoiceMode.FULL)
+
+    def test_early_offer_is_never_permitted_for_unknown_or_explicit_full_invoice(self):
+        early = replace(self.facts, gross_total="200.00", price_final=False)
+        for changes in ({"exception_3c": None}, {"exception_6a": True},
+                        {"exception_13b": None}, {"german_rule_approved": False},
+                        {"customer_requests_full": True}, {"currency": "USD"}):
+            with self.subTest(changes=changes):
+                self.assertIs(early_invoice_mode(replace(early, **changes)), InvoiceMode.FULL)
 
     def test_unknown_and_exception_fall_back(self):
         for field in ("exception_3c", "exception_6a", "exception_13b"):
