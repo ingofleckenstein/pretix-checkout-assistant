@@ -1,22 +1,17 @@
 # pretix-checkout-assistant
 
-**Work in progress: this is not an installable pretix plugin. Do not deploy it.**
+**Experimental work in progress. Do not install or deploy in production.**
 
-Target for development: pretix 2026.8.0; compatibility with the installed customer OIDC and Keycloak membership plugins must be verified in an isolated environment.
+Target: pretix 2026.8.0. The repository now contains an experimental, partial pretix plugin. It is not a release and has not passed end-to-end checkout, invoice PDF, Docker, or Keycloak tests.
 
-## Current contents
+For a deliberately narrow signed-in customer scenario, the experimental adapter tries to populate a single saved billing profile and submit the normal pretix form. It refuses automatic submission for multiple tickets or addresses, existing invoice data, individual questions, unknown inputs, or unsuitable invoice settings. Pretix must still perform its own validation and tax calculation. This behavior needs integration testing.
 
-Two independent, experimental decision modules and unit tests. They do not read pretix data, alter checkout, generate invoices, or determine legal compliance. Callers must obtain and verify their inputs and perform pretix's own validation.
+Guest checkout choices, small-amount invoices, robust invoice-generation handling, consent flow improvements and production installation and rollback instructions are **not implemented**.
 
-- `customer_policy` permits attempting normal validation only for a conservative, unambiguous customer scenario.
-- `invoice_policy` identifies potential small-invoice candidates only when explicitly confirmed prerequisites are met; unknowns fall back to a full invoice.
-
-Run the current unit tests from the repository root:
+To run the current unit tests in an environment with Django installed:
 
 ```sh
 python -m unittest discover -s tests -v
 ```
 
-## Outstanding work
-
-Pretix integration and end-to-end checkout tests, profile selection and consent, the guest checkout choices, tax and price recalculation, final invoice generation and PDF verification, exception handling, version compatibility, and installation and rollback instructions are not implemented. All of these are required before a release.
+The small-invoice module only identifies potential candidates when explicitly confirmed prerequisites are met; unknown cases fall back to a full invoice. It does not determine legal compliance.
