@@ -25,16 +25,14 @@ class InvoiceFacts:
     customer_requests_full: bool
 
 
-def invoice_mode(facts: InvoiceFacts) -> InvoiceMode:
-    """Only permit the short invoice path when every prerequisite is explicit.
+EARLY_GROSS_LIMIT = Decimal("200.00")
+FINAL_GROSS_LIMIT = Decimal("250.00")
 
-    Re-run on final order total after fees, discounts and tax recalculation.
-    A candidate must still be checked for all required invoice content and
-    any further applicable rules. Unknown legal facts fail closed.
-    """
+
+def _candidate(facts: InvoiceFacts, limit: Decimal) -> InvoiceMode:
     if facts.customer_requests_full is not False:
         return InvoiceMode.FULL
-    if facts.price_final is not True or facts.german_rule_approved is not True:
+    if facts.german_rule_approved is not True:
         return InvoiceMode.FULL
     if facts.currency != "EUR":
         return InvoiceMode.FULL
@@ -44,11 +42,31 @@ def invoice_mode(facts: InvoiceFacts) -> InvoiceMode:
         if isinstance(facts.gross_total, (float, bool)):
             return InvoiceMode.FULL
         total = Decimal(facts.gross_total)
-        if not total.is_finite() or total <= 0 or total > Decimal("250.00"):
+        if not total.is_finite() or total <= 0 or total > limit:
             return InvoiceMode.FULL
         if total != total.quantize(Decimal("0.01")):
             return InvoiceMode.FULL
     except (InvalidOperation, ValueError, TypeError):
         return InvoiceMode.FULL
     return InvoiceMode.SMALL_AMOUNT_CANDIDATE
+
+
+def early_invoice_mode(facts: InvoiceFacts) -> InvoiceMode:
+    """Preliminary offer only; never authorizes an address-free order.
+
+    The amount must include every known gross component at this stage. A
+    separate final check is mandatory even when the early result is eligible.
+    """
+    return _candidate(facts, EARLY_GROSS_LIMIT)
+
+
+def invoice_mode(facts: InvoiceFacts) -> InvoiceMode:
+    """Evaluate the final gross total, including fees, rounding and taxes.
+
+    A candidate still requires legal and invoice-content validation. Unknown
+    facts fail closed; this helper alone cannot enforce checkout safety.
+    """
+    if facts.price_final is not True:
+        return InvoiceMode.FULL
+    return _candidate(facts, FINAL_GROSS_LIMIT)
 
