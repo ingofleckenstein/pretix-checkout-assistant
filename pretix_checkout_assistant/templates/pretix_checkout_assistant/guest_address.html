@@ -1,0 +1,13 @@
+{% extends "pretixpresale/event/checkout_base.html" %}
+{% load i18n bootstrap3 %}
+{% block inner %}
+<p>{% trans "A complete billing address is required for this order." %}</p>
+<form class="form-horizontal" method="post">
+    {% csrf_token %}
+    {% bootstrap_form form layout="checkout" %}
+    <div class="checkout-button-row">
+        <a class="btn btn-default" href="{{ prev_url }}">{% trans "Go back" %}</a>
+        <button class="btn btn-primary" type="submit">{% trans "Continue" %}</button>
+    </div>
+</form>
+{% endblock %}

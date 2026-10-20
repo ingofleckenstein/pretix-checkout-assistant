@@ -4,4 +4,3 @@ from .apps import CheckoutAssistantApp
 
 default_app_config = "pretix_checkout_assistant.apps.CheckoutAssistantApp"
 PretixPluginMeta = CheckoutAssistantApp.PretixPluginMeta
-

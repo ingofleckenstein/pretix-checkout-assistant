@@ -61,4 +61,3 @@ def customer_checkout_action(facts: CheckoutFacts) -> CheckoutAction:
     if not any(isinstance(value, str) and value.strip() for value in (name, company)):
         return CheckoutAction.SHOW_FORM
     return CheckoutAction.APPLY_AND_VALIDATE
-

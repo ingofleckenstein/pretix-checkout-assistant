@@ -80,4 +80,3 @@ def guest_invoice_mode(early: InvoiceFacts, final: InvoiceFacts) -> InvoiceMode:
     if early_invoice_mode(early) is not InvoiceMode.SMALL_AMOUNT_CANDIDATE:
         return InvoiceMode.FULL
     return invoice_mode(final)
-

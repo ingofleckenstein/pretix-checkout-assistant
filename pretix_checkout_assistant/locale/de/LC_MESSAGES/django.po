@@ -1,0 +1,41 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "A complete billing address is required for this order."
+msgstr "Für diese Bestellung benötigen wir eine vollständige Rechnungsanschrift."
+
+msgid "A complete billing address is required for this order. Please check your information."
+msgstr "Für diese Bestellung ist eine vollständige Rechnungsanschrift erforderlich. Bitte überprüfen Sie Ihre Angaben."
+
+msgid "Billing address"
+msgstr "Rechnungsanschrift"
+
+msgid "Edit"
+msgstr "Bearbeiten"
+
+msgid "Invoice address"
+msgstr "Rechnungsanschrift"
+
+msgid "Unfortunately, this address cannot be used for this order."
+msgstr "Diese Anschrift kann für diese Bestellung leider nicht verwendet werden."
+
+msgid "This field is required."
+msgstr "Dieses Feld ist erforderlich."
+
+msgid ""
+"Small-amount invoice under Section 33 of the German VAT Implementing "
+"Regulation (UStDV).\n"
+"The recipient’s billing address is not required for this invoice."
+msgstr ""
+"Kleinbetragsrechnung gemäß § 33 UStDV.\n"
+"Eine Rechnungsanschrift des Empfängers ist hierfür nicht erforderlich."
+
+msgid "Checkout Assistant (experimental)"
+msgstr "Checkout-Assistent (experimentell)"
+
+msgid "Experimental customer checkout integration; not production-ready."
+msgstr "Experimentelle Checkout-Integration; noch nicht für den Produktivbetrieb geeignet."

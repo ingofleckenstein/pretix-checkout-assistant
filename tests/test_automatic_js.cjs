@@ -57,4 +57,3 @@ test('does not replace a different existing name', () => {
   assert.equal(result.submitted, 0);
   assert.equal(result.fields.street.value, '');
 });
-

@@ -51,4 +51,3 @@ window.addEventListener('load', function () {
     }
     window.setTimeout(afterAddressUpdate, 100);
 });
-

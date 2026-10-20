@@ -16,4 +16,3 @@ class CheckoutAssistantApp(AppConfig):
 
     def ready(self):
         from . import signals  # noqa: F401
-

@@ -76,4 +76,3 @@ def should_attempt(request, step, *, prefill_only=False):
         previous_form_error=False,
     )
     return customer_checkout_action(facts) is CheckoutAction.APPLY_AND_VALIDATE
-
