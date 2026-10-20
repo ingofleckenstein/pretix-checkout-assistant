@@ -20,14 +20,18 @@ def checkout_head(sender, request, **kwargs):
         return ""
     try:
         eligible = should_attempt(request, step)
+        prefill = eligible or should_attempt(request, step, prefill_only=True)
     except Exception:
+        # A compatibility problem must leave the standard checkout available.
         logger.exception("Checkout assistant eligibility check failed")
         return ""
-    if not eligible:
+    if not prefill:
         return ""
     try:
         script_url = static("pretix_checkout_assistant/automatic.js")
     except (ValueError, OSError):
         logger.exception("Checkout assistant static file unavailable")
         return ""
-    return format_html('<script defer src="{}"></script>', script_url)
+    return format_html('<script defer data-checkout-assistant="{}" src="{}"></script>',
+                       "submit" if eligible else "prefill", script_url)
+
