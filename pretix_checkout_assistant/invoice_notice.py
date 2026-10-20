@@ -17,9 +17,14 @@ def add_small_invoice_notice(event, invoice):
         return False
     if event.currency != 'EUR' or invoice.is_cancellation or invoice.reverse_charge:
         return False
-    if invoice.order.customer_id or any((invoice.invoice_to, invoice.invoice_to_name,
-                                         invoice.invoice_to_company, invoice.invoice_to_street,
+    if invoice.order.customer_id or any((invoice.invoice_to_company, invoice.invoice_to_street,
                                          invoice.invoice_to_city, invoice.invoice_to_zipcode)):
+        return False
+    # A guest's contact name can appear in the recipient block even without an
+    # address. Preserve it, but leave any other unstructured recipient data alone.
+    recipient = (invoice.invoice_to or '').strip()
+    name = (invoice.invoice_to_name or '').strip()
+    if recipient and recipient != name:
         return False
     try:
         total = Decimal(invoice.order.total)
@@ -28,6 +33,6 @@ def add_small_invoice_notice(event, invoice):
     except (InvalidOperation, ValueError, TypeError):
         return False
     # pretix calls this hook inside the invoice's selected language context.
-    invoice.invoice_to = gettext(NOTICE)
+    invoice.invoice_to = '\n'.join(filter(None, (recipient, gettext(NOTICE))))
     invoice.save(update_fields=['invoice_to'])
     return True
