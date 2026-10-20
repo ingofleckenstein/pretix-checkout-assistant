@@ -8,7 +8,7 @@ from django.core.validators import validate_email
 from .customer_policy import CheckoutAction, CheckoutFacts, customer_checkout_action
 
 
-def should_attempt(request, step):
+def should_attempt(request, step, *, prefill_only=False):
     """Allow the browser to submit the normal pretix form only in a narrow case."""
     if request.method != "GET" or request.GET.get("dir") == "prev":
         return False
@@ -33,7 +33,7 @@ def should_attempt(request, step):
         return False
     if step.get_cart()["total"] <= 0:
         return False
-    if step.order_questions_form and step.order_questions_form.fields:
+    if not prefill_only and step.order_questions_form and step.order_questions_form.fields:
         return False
     if set(step.contact_form.fields) - {"email", "email_repeat"}:
         return False
@@ -41,7 +41,7 @@ def should_attempt(request, step):
     if len(positions) != 1 or len(step.forms) != 1:
         return False
     form = step.forms[0]
-    if set(form.fields) - {"attendee_name_parts", "save", "saved_id"}:
+    if not prefill_only and set(form.fields) - {"attendee_name_parts", "save", "saved_id"}:
         return False
     if "attendee_name_parts" not in form.fields:
         return False
