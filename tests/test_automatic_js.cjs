@@ -6,19 +6,19 @@ const path = require('node:path');
 
 const script = fs.readFileSync(path.join(__dirname, '../pretix_checkout_assistant/static/pretix_checkout_assistant/automatic.js'), 'utf8');
 
-function run({profiles, existing = '', valid = true, apply = true, waitForUpdate = false} = {}) {
+function run({profiles, existing = '', valid = true, apply = true, waitForUpdate = false, mode = 'submit', otherValues = []} = {}) {
   const address = {street: 'Testweg 1', zipcode: '70176', city: 'Stuttgart', country: 'DE'};
   const fields = Object.fromEntries(Object.keys(address).map(k => [k, {value: k === 'street' ? existing : ''}]));
   let submitted = 0;
   const form = {querySelector: () => null, checkValidity: () => valid, requestSubmit: () => submitted++};
   const button = {click: () => { if (apply) Object.keys(address).forEach(k => { fields[k].value = address[k]; fields[k].disabled = waitForUpdate; }); }};
-  const invoice = {closest: () => form, classList: {contains: () => false}, querySelector: selector => {
+  const invoice = {closest: () => form, classList: {contains: () => false}, querySelectorAll: () => otherValues, querySelector: selector => {
     if (selector === '.profile-apply') return button;
     const match = selector.match(/^\[name="([^"]+)"\]$/);
     return match ? fields[match[1]] : null;
   }};
   const source = {textContent: JSON.stringify(profiles === undefined ? [address] : profiles)};
-  const document = {querySelector: s => s === '#invoice' ? invoice : s === '#addresses_json' ? source : null};
+  const document = {querySelector: s => s === '#invoice' ? invoice : s === '#addresses_json' ? source : s === 'script[data-checkout-assistant]' ? {dataset: {checkoutAssistant: mode}} : null};
   let ticks = 0;
   const window = {addEventListener: (_, fn) => fn(), setTimeout: fn => {
     ticks++;
@@ -44,5 +44,17 @@ test('does not overwrite an existing address', () => {
 
 test('does not choose among multiple addresses', () => {
   assert.equal(run({profiles: [{}, {}]}).submitted, 0);
+});
+
+test('prefills without submitting when further answers are required', () => {
+  const result = run({mode: 'prefill'});
+  assert.equal(result.submitted, 0);
+  assert.equal(result.fields.street.value, 'Testweg 1');
+});
+
+test('does not replace a different existing name', () => {
+  const result = run({otherValues: [{type: 'text', name: 'name_parts_0', value: 'Other'}]});
+  assert.equal(result.submitted, 0);
+  assert.equal(result.fields.street.value, '');
 });
 
