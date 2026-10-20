@@ -7,17 +7,25 @@ window.addEventListener('load', function () {
     let profiles;
     try { profiles = JSON.parse(source.textContent); } catch (_) { return; }
     if (!Array.isArray(profiles) || profiles.length !== 1) return;
+    const profile = profiles[0];
     // Never overwrite a previously entered address.
     for (const name of ['street', 'zipcode', 'city']) {
         const input = invoice.querySelector('[name="' + name + '"]');
         if (!input || input.value.trim()) return;
     }
+    // Refuse to replace other existing user/plugin-supplied text values.
+    for (const input of invoice.querySelectorAll('input[name], textarea[name]')) {
+        if (['hidden', 'checkbox', 'radio'].includes(input.type)) continue;
+        const value = String(input.value || '').trim();
+        if (value && (typeof profile[input.name] !== 'string' || value !== profile[input.name].trim())) return;
+    }
     const button = invoice.querySelector('.profile-apply');
     if (!button || invoice.classList.contains('profile-none-matched')) return;
     button.click();
+    const script = document.querySelector('script[data-checkout-assistant]');
+    if (!script || script.dataset.checkoutAssistant !== 'submit') return;
     // Pretix temporarily disables address fields while asynchronously updating
     // country-dependent requirements. Never submit while this is in flight.
-    const profile = profiles[0];
     let attempts = 0;
     function afterAddressUpdate() {
         if (++attempts > 50) return;
