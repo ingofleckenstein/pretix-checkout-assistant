@@ -12,8 +12,13 @@ form. It leaves the form visible when the data is ambiguous, extra answers
 are needed or other safety checks fail. Saving a new profile uses pretix's
 own unchecked consent checkbox. Keycloak integration is not verified.
 
-The experimental guest flow uses a preliminary 200 EUR gross threshold
-before payment and a final 250 EUR gross threshold including fees. If either
+The experimental guest flow derives its preliminary threshold per event:
+250 EUR minus the largest gross fee calculated by any enabled payment method
+at a 250 EUR base amount. This deliberately overestimates percentage fees.
+Providers with custom fee calculations or multiple simultaneous payment
+methods cannot be bounded reliably and require an address. After payment
+selection the actual final gross total including all fees must not exceed
+250 EUR. If either
 threshold is exceeded it asks for an address. An additional order-creation
 guard rejects address-free orders that do not meet its checks. Events must
 explicitly enable the experiment and attest that the simplified invoice is
@@ -64,7 +69,15 @@ the language of the staff member currently viewing it. Existing generated
 invoices are not automatically regenerated.
 
 An optional invoice hook adds a notice identifying an address-free guest
-invoice as a Kleinbetragsrechnung. It is separately disabled by default.
+invoice as a Kleinbetragsrechnung. For signed-in customers it also removes
+the recipient's name, company and address from the invoice snapshot when
+the event has approved the small-invoice rule and the final total is at
+most 250 EUR. It leaves customer profiles and order addresses intact.
+It also removes pretix's standard attendee-name entries from invoice lines;
+custom questions, product names and other plugin text can still contain
+personal information and require review in each event.
+VAT IDs, reverse charge, custom tax rules, electronic delivery and other
+special invoice data prevent anonymization. It is disabled by default.
 Enabling this notice alone does not establish legal eligibility. The notice,
 invoice settings and guest guard must be assessed together.
 
@@ -77,7 +90,14 @@ addresses. They did not touch the production installation:
   address reached payment automatically; a required participant question
   remained visible.
 * A saved-address consent test covered both unchecked and checked states.
-* A guest order of 200.01 EUR required an address before payment.
+* Earlier tests used a fixed 200 EUR threshold; the new event-specific limit
+  is covered by dedicated fee calculation tests.
+* A two-ticket guest checkout with actual local bank transfer and SEPA
+  providers and a 2 EUR fee requires an address above 248 EUR before
+  payment, and above 250 EUR after payment selection.
+* Locally generated 20 EUR customer invoice PDF omitted the test recipient's
+  name and address, while the customer profile and order address remained;
+  a 250.01 EUR customer invoice retained its address.
 * Guest orders totaling 249 and exactly 250 EUR after payment fees generated
   invoices with the small-invoice notice.
 * A guest order totaling 251 EUR after a test payment fee required an address

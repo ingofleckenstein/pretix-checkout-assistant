@@ -25,7 +25,6 @@ class InvoiceFacts:
     customer_requests_full: bool
 
 
-EARLY_GROSS_LIMIT = Decimal("200.00")
 FINAL_GROSS_LIMIT = Decimal("250.00")
 
 
@@ -51,13 +50,13 @@ def _candidate(facts: InvoiceFacts, limit: Decimal) -> InvoiceMode:
     return InvoiceMode.SMALL_AMOUNT_CANDIDATE
 
 
-def early_invoice_mode(facts: InvoiceFacts) -> InvoiceMode:
+def early_invoice_mode(facts: InvoiceFacts, early_limit: Decimal = Decimal('0.00')) -> InvoiceMode:
     """Preliminary offer only; never authorizes an address-free order.
 
     The amount must include every known gross component at this stage. A
     separate final check is mandatory even when the early result is eligible.
     """
-    return _candidate(facts, EARLY_GROSS_LIMIT)
+    return _candidate(facts, min(FINAL_GROSS_LIMIT, early_limit))
 
 
 def invoice_mode(facts: InvoiceFacts) -> InvoiceMode:
@@ -71,12 +70,12 @@ def invoice_mode(facts: InvoiceFacts) -> InvoiceMode:
     return _candidate(facts, FINAL_GROSS_LIMIT)
 
 
-def guest_invoice_mode(early: InvoiceFacts, final: InvoiceFacts) -> InvoiceMode:
+def guest_invoice_mode(early: InvoiceFacts, final: InvoiceFacts, early_limit: Decimal = Decimal('0.00')) -> InvoiceMode:
     """Require both the preliminary buffer and the final legal limit.
 
     This is still only a policy decision: the caller must obtain both totals
     from the same checkout and enforce the result before placing an order.
     """
-    if early_invoice_mode(early) is not InvoiceMode.SMALL_AMOUNT_CANDIDATE:
+    if early_invoice_mode(early, early_limit) is not InvoiceMode.SMALL_AMOUNT_CANDIDATE:
         return InvoiceMode.FULL
     return invoice_mode(final)

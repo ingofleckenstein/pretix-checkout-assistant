@@ -12,6 +12,7 @@ from pretix.presale.views import CartMixin
 from pretix.presale.views.cart import get_or_create_cart_id
 from pretix.helpers.http import redirect_to_url
 from django_scopes import scopes_disabled
+from .fee_limits import early_limit
 
 
 # Keep the copy only in the current cart session. pretix removes the original
@@ -135,7 +136,7 @@ class GuestAddressStep(CartMixin, TemplateFlowStep):
             return True
         try:
             cart = self.get_cart(payments=None if self.final else [])
-            return Decimal(cart['total']) > (Decimal('250.00') if self.final else Decimal('200.00'))
+            return Decimal(cart['total']) > (Decimal('250.00') if self.final else early_limit(self.event))
         except (KeyError, ValueError, TypeError, TaxRule.SaleNotAllowed):
             return True
 

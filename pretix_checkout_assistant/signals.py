@@ -11,7 +11,7 @@ from pretix.control.signals import html_head as control_html_head, order_info as
 from pretix.multidomain.urlreverse import eventreverse
 from pretix.base.signals import build_invoice_data, order_placed, register_notification_types
 from pretix.base.notifications import ParametrizedOrderNotificationType
-from pretix.base.models import InvoiceAddress, OrderFee
+from pretix.base.models import InvoiceAddress
 from pretix.base.services.orders import OrderError
 from decimal import Decimal
 
@@ -139,12 +139,9 @@ def guest_final_guard(sender, order, **kwargs):
     fees = list(order.fees.select_related('tax_rule'))
     unsupported_tax = any(rule and (rule.eu_reverse_charge or rule.custom_rules)
                           for rule in [p.tax_rule for p in positions] + [f.tax_rule for f in fees])
-    preliminary = sum((p.price for p in positions), Decimal('0.00')) + sum(
-        (f.value for f in fees if f.fee_type != OrderFee.FEE_TYPE_PAYMENT), Decimal('0.00'))
     total = order.total
     if (not small_invoice_approved(sender) or unsupported_tax or not positions or
             order.sales_channel.identifier not in sender.settings.invoice_generate_sales_channels or
-            preliminary <= 0 or preliminary > Decimal('200.00') or
             total <= 0 or total > Decimal('250.00')):
         raise OrderError(_('A complete billing address is required for this order. Please check your information.'))
 

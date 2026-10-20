@@ -27,9 +27,9 @@ class SmallInvoicePolicyTests(unittest.TestCase):
                                  ("200.00", InvoiceMode.SMALL_AMOUNT_CANDIDATE),
                                  ("200.01", InvoiceMode.FULL)):
             with self.subTest(amount=amount):
-                self.assertIs(early_invoice_mode(replace(self.facts, gross_total=amount, price_final=False)), expected)
+                self.assertIs(early_invoice_mode(replace(self.facts, gross_total=amount, price_final=False), Decimal('200.00')), expected)
         early = replace(self.facts, gross_total="200.00", price_final=False)
-        self.assertIs(early_invoice_mode(early), InvoiceMode.SMALL_AMOUNT_CANDIDATE)
+        self.assertIs(early_invoice_mode(early, Decimal('200.00')), InvoiceMode.SMALL_AMOUNT_CANDIDATE)
         self.assertIs(invoice_mode(early), InvoiceMode.FULL)
         self.assertIs(invoice_mode(replace(early, gross_total="250.00", price_final=True)), InvoiceMode.SMALL_AMOUNT_CANDIDATE)
         self.assertIs(invoice_mode(replace(early, gross_total="250.01", price_final=True)), InvoiceMode.FULL)
@@ -40,16 +40,20 @@ class SmallInvoicePolicyTests(unittest.TestCase):
                         {"exception_13b": None}, {"german_rule_approved": False},
                         {"customer_requests_full": True}, {"currency": "USD"}):
             with self.subTest(changes=changes):
-                self.assertIs(early_invoice_mode(replace(early, **changes)), InvoiceMode.FULL)
+                self.assertIs(early_invoice_mode(replace(early, **changes), Decimal('200.00')), InvoiceMode.FULL)
 
     def test_guest_decision_requires_both_checks(self):
         early = replace(self.facts, gross_total="200.00", price_final=False)
         final = replace(self.facts, gross_total="250.00", price_final=True)
-        self.assertIs(guest_invoice_mode(early, final), InvoiceMode.SMALL_AMOUNT_CANDIDATE)
-        self.assertIs(guest_invoice_mode(replace(early, gross_total="200.01"), final), InvoiceMode.FULL)
-        self.assertIs(guest_invoice_mode(early, replace(final, gross_total="250.01")), InvoiceMode.FULL)
-        self.assertIs(guest_invoice_mode(early, replace(final, price_final=False)), InvoiceMode.FULL)
-        self.assertIs(guest_invoice_mode(early, replace(final, customer_requests_full=True)), InvoiceMode.FULL)
+        limit = Decimal('200.00')
+        self.assertIs(guest_invoice_mode(early, final, limit), InvoiceMode.SMALL_AMOUNT_CANDIDATE)
+        self.assertIs(guest_invoice_mode(replace(early, gross_total="200.01"), final, limit), InvoiceMode.FULL)
+        self.assertIs(guest_invoice_mode(early, replace(final, gross_total="250.01"), limit), InvoiceMode.FULL)
+        self.assertIs(guest_invoice_mode(early, replace(final, price_final=False), limit), InvoiceMode.FULL)
+        self.assertIs(guest_invoice_mode(early, replace(final, customer_requests_full=True), limit), InvoiceMode.FULL)
+
+    def test_unknown_early_limit_fails_closed(self):
+        self.assertIs(early_invoice_mode(replace(self.facts, gross_total='20.00')), InvoiceMode.FULL)
 
     def test_unknown_and_exception_fall_back(self):
         for field in ("exception_3c", "exception_6a", "exception_13b"):
