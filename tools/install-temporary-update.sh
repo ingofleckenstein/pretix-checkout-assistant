@@ -12,7 +12,7 @@ trap 'echo "Update stopped. Backup, if already created: $backup" >&2' ERR
 test "$(id -u)" = 0
 docker inspect -f '{{.State.Running}}' "$container" | grep -qx true
 curl -fsSL "https://codeload.github.com/ingofleckenstein/pretix-checkout-assistant/tar.gz/$commit" -o "$archive"
-printf '%s  %s\n' '1fa87782a846b879b96a473928f2411bb1d4bb7a4b354be9e047852bb9104cf4' "$archive" | sha256sum -c -
+printf '%s  %s\n' '5c90cd39572274b5cb5ed7eb8c7573d6bfbef5045a2ad9b65647e23935d7da59' "$archive" | sha256sum -c -
 docker exec -i "$container" python - <<'PY'
 from pathlib import Path
 import hashlib
@@ -42,7 +42,7 @@ PY
 docker cp "$container:/tmp/checkout-assistant-before-update.tar.gz" "$backup/plugin.tar.gz"
 docker cp "$container:/pretix/src/pretix/static.dist/staticfiles.json" "$backup/staticfiles.json"
 docker cp "$archive" "$container:/tmp/checkout-assistant-update.tar.gz"
-tar -xOf "$archive" pretix-checkout-assistant-a447093/tools/update-checkout-static.py > /tmp/update-checkout-static.py
+tar -xOf "$archive" "pretix-checkout-assistant-$commit/tools/update-checkout-static.py" > /tmp/update-checkout-static.py
 docker exec -u 0 "$container" python -m pip install --force-reinstall --no-deps --no-build-isolation /tmp/checkout-assistant-update.tar.gz
 docker exec -i -u 0 -e CHECKOUT_JS_SHA256="$asset_sha" "$container" python -m pretix shell < /tmp/update-checkout-static.py
 docker exec -i -u 0 -e CHECKOUT_JS_SHA256="$asset_sha" -e CHECKOUT_STATIC_APPLY=1 "$container" python -m pretix shell < /tmp/update-checkout-static.py
